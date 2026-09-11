@@ -106,4 +106,4 @@ rotates about an axis offset by half the hinge gap so the closed stack lands at 
   the landing angle is projected from momentum, and dragging past a stop rubber-bands.
 
 Unofficial fan-made tool, not affiliated with Apple. Jayesh would be very happy if Apple
-gave him one for free 🙂
+gave him one for free 🙂 Until then: [buy me a coffee](https://buymeacoffee.com/Jayeshbidani).

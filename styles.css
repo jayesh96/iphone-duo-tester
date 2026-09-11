@@ -906,6 +906,15 @@ h1 .grad {
 .tile.violet { background: radial-gradient(120% 100% at 100% 100%, rgba(175,82,222,0.2), rgba(175,82,222,0) 60%), var(--surface); }
 
 footer { max-width: 1120px; margin: 0 auto; padding: 24px 0 48px; border-top: 1px solid var(--line); color: var(--fg-3); font-size: 12.5px; text-wrap: pretty; }
+footer .coffee {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--line);
+  color: var(--fg); font-weight: 600;
+  transition: background 0.15s, transform 0.1s ease-out;
+}
+footer .coffee:hover { background: var(--surface-2); }
+footer .coffee:active { transform: scale(0.97); }
 
 @media (max-width: 900px) {
   .tile, .tile.wide { grid-column: span 3; }
