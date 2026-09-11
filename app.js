@@ -559,7 +559,8 @@ const endDrag = (e) => {
   drag.active = false;
   state.dragging = false;
   stage.classList.remove('dragging');
-  setCursorState(cursorOverStage ? 'grab' : 'default');
+  setCursorState('grab');
+  if (!cursorOverStage) showRing(false);
   if (!drag.moved) {
     setTarget(state.fold < 90 ? 180 : 0);
   } else {
@@ -664,48 +665,40 @@ for (const fr of Object.values(frames)) fr.addEventListener('pointerenter', touc
 /* Custom cursor                                                          */
 /* ====================================================================== */
 
+// The browser's own cursor is used everywhere except over the device itself,
+// where a ring with drag arrows takes over (and the site inside stays native).
 const finePointer = window.matchMedia('(pointer: fine)').matches;
-let cursorState = 'default';
+let cursorState = 'grab';
 let cursorOverStage = false;
-const cur = { x: -100, y: -100, tx: -100, ty: -100, shown: false };
+const cur = { x: -100, y: -100, tx: -100, ty: -100 };
 function setCursorState(s) {
   if (!cursorEl || s === cursorState) return;
   cursorEl.classList.remove('is-' + cursorState);
   cursorState = s;
   cursorEl.classList.add('is-' + s);
-  const scale = s === 'hover' ? 1.6 : s === 'grab' ? 1.25 : s === 'grabbing' ? 0.9 : s === 'text' ? 0.5 : 1;
-  if (gsap) gsap.to(cursorEl, { scale, duration: 0.35, ease: 'back.out(2)' });
-  else cursorEl.style.setProperty('--s', scale);
+  const scale = s === 'grabbing' ? 0.85 : 1;
+  if (gsap) gsap.to(cursorEl, { scale, duration: 0.3, ease: 'back.out(2)' });
+}
+function showRing(on) {
+  if (!cursorEl) return;
+  cursorEl.classList.toggle('is-shown', on);
+  stage.classList.toggle('ring-cursor', on);
 }
 if (cursorEl && finePointer) {
-  document.documentElement.classList.add('custom-cursor');
-  const hoverSel = 'a, button, input:not([type=range]), label, [role=button]';
+  cursorEl.classList.add('is-grab');
   window.addEventListener('pointermove', (e) => {
     cur.tx = e.clientX; cur.ty = e.clientY;
-    if (!cur.shown) { cur.shown = true; cur.x = cur.tx; cur.y = cur.ty; cursorEl.classList.add('is-shown'); }
     if (state.dragging) return;
     const t = e.target;
-    cursorOverStage = !!(t && t.closest && t.closest('#stage')) && !isInteractive(t);
-    // Text fields keep the browser's I-beam so the caret can be placed precisely.
-    const overText = !!(t && t.closest && t.closest('input:not([type=range]), textarea, [contenteditable="true"]'));
-    document.documentElement.classList.toggle('text-cursor', overText);
-    if (overText) setCursorState('text');
-    else if (t && t.closest && t.closest(hoverSel)) setCursorState('hover');
-    else if (t && t.closest && t.closest('input[type=range]')) setCursorState('grab');
-    else if (cursorOverStage) setCursorState('grab');
-    else setCursorState('default');
+    const over = !!(t && t.closest && t.closest('#stage')) && !isInteractive(t);
+    if (over && !cursorOverStage) { cur.x = cur.tx; cur.y = cur.ty; }
+    cursorOverStage = over;
+    showRing(over);
+    setCursorState('grab');
   }, { passive: true });
-  document.addEventListener('pointerleave', () => { cur.shown = false; cursorEl.classList.remove('is-shown'); });
-  document.addEventListener('pointerenter', () => { cur.shown = true; cursorEl.classList.add('is-shown'); });
-  window.addEventListener('pointerdown', () => cursorEl.classList.add('is-down'));
-  window.addEventListener('pointerup', () => cursorEl.classList.remove('is-down'));
-  // Inside the previewed site the browser's own cursor takes over.
-  for (const fr of Object.values(frames)) {
-    fr.addEventListener('pointerenter', () => { document.documentElement.classList.add('native-cursor'); cursorEl.classList.remove('is-shown'); });
-    fr.addEventListener('pointerleave', () => { document.documentElement.classList.remove('native-cursor'); cursorEl.classList.add('is-shown'); });
-  }
+  stage.addEventListener('pointerleave', () => { if (!state.dragging) { cursorOverStage = false; showRing(false); } });
   const followCursor = () => {
-    const k = state.reduced ? 1 : 0.28;
+    const k = state.reduced ? 1 : 0.35;
     cur.x += (cur.tx - cur.x) * k;
     cur.y += (cur.ty - cur.y) * k;
     cursorEl.style.translate = `${cur.x.toFixed(1)}px ${cur.y.toFixed(1)}px`;

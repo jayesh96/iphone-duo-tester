@@ -321,11 +321,9 @@ h1 .grad {
   backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
 }
 
-/* Custom cursor ----------------------------------------------------------- */
-html.custom-cursor, html.custom-cursor * { cursor: none !important; }
-html.custom-cursor.native-cursor, html.custom-cursor.native-cursor * { cursor: auto !important; }
-html.custom-cursor input:not([type=range]), html.custom-cursor textarea, html.custom-cursor [contenteditable="true"] { cursor: text !important; }
-html.custom-cursor.text-cursor .cursor { opacity: 0; }
+/* Ring cursor, only while hovering the device ------------------------------ */
+.stage.ring-cursor, .stage.ring-cursor .css3d, .stage.ring-cursor .screen, .stage.ring-cursor .wallpaper { cursor: none !important; }
+.stage iframe, .stage .viewer, .stage .notice { cursor: auto; }
 .cursor {
   position: fixed; left: 0; top: 0; z-index: 9999; pointer-events: none;
   width: 34px; height: 34px; margin: -17px 0 0 -17px;
@@ -337,11 +335,8 @@ html.custom-cursor.text-cursor .cursor { opacity: 0; }
   transition: opacity 0.2s, border-color 0.2s, background 0.25s;
   will-change: translate, transform;
 }
-html.custom-cursor .cursor.is-shown { opacity: 1; }
-.cursor .dot { width: 5px; height: 5px; border-radius: 50%; background: #fff; transition: transform 0.2s; }
-.cursor.is-down .dot { transform: scale(1.8); }
-.cursor.is-hover { background: rgba(255,255,255,0.18); border-color: transparent; }
-.cursor.is-hover .dot { transform: scale(0.6); }
+.cursor.is-shown { opacity: 1; }
+.cursor .dot { width: 5px; height: 5px; border-radius: 50%; background: #fff; }
 .cursor .arrows { position: absolute; inset: 0; display: none; }
 .cursor .arrows i {
   position: absolute; top: 50%; width: 7px; height: 7px;
