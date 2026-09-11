@@ -260,6 +260,7 @@
     b.addEventListener('click', () => setColor(b.dataset.color));
   });
   function setColor(c) {
+    if (phone.dataset.color && phone.dataset.color !== c) track('finish', { finish: c });
     phone.dataset.color = c;
     stage.dataset.color = c;
     $$('.seg [data-color]').forEach((b) => b.classList.toggle('active', b.dataset.color === c));
@@ -268,6 +269,7 @@
 
   flipBtn.addEventListener('click', () => {
     state.flipped = !state.flipped;
+    track('turn_around', { flipped: state.flipped });
     flipBtn.setAttribute('aria-pressed', String(state.flipped));
     flipBtn.textContent = state.flipped ? 'Turn back' : 'Turn around';
     touched();
@@ -446,6 +448,9 @@
 
   function setVerdict(kind, title, detailHtml, chips) {
     verdict.hidden = false;
+    if (kind !== 'checking' && verdict.dataset.kind !== kind) {
+      track('verdict', { kind, host: site.url ? new URL(site.url).hostname : undefined, mode, proxied: site.proxied });
+    }
     verdict.dataset.kind = kind;
     verdictTitle.textContent = title;
     verdictDetail.innerHTML = detailHtml || '';
@@ -461,6 +466,11 @@
 
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+  // Analytics events (no-op when gtag is absent or blocked).
+  function track(name, params) {
+    try { if (typeof gtag === 'function') gtag('event', name, params); } catch {}
+  }
+
   async function run(raw) {
     const u = normalizeClient(raw);
     if (!u) {
@@ -470,6 +480,7 @@
     }
     const token = ++site.token;
     site.lastInput = raw;
+    track('test_url', { host: u.hostname, mode });
     site.url = null;
     site.result = null;
     site.unverified = false;
