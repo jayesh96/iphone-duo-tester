@@ -78,9 +78,17 @@ verdict says "via proxy" whenever this mode was used.
 
 ## Geometry
 
-All dimensions are in millimetres, scaled by one CSS custom property (`--mm`) that the
-script sets from the available width. Numbers come from Apple's published tech specs
-(announced 9 September 2026):
+The device body is rendered in WebGL with Three.js (vendored under `vendor/three`, no CDN):
+extruded, bevelled titanium slabs, a PBR room environment for the mirror-polished frame, a
+half-cylinder hinge that morphs into the 11.3 mm spine, the full-width camera bar, and the
+keys on the rail. The two displays stay real DOM iframes: Three's CSS3DRenderer places them
+in the same camera space, and depth-only "hole" meshes in the WebGL layer let them show
+through while still being occluded by the body. UI motion (entrance, scroll reveals,
+cursor, drag hint) uses GSAP (`vendor/gsap`); the hinge itself runs on an interruptible
+spring so drags and flicks feel physical.
+
+All dimensions are in millimetres, which are also the scene units. Numbers come from
+Apple's published tech specs (announced 9 September 2026):
 
 | | Closed | Open |
 | --- | --- | --- |
@@ -89,14 +97,17 @@ script sets from the available width. Numbers come from Apple's published tech s
 | Active area (derived) | 77.2 × 112.3 mm | 157.7 × 110.9 mm |
 | Emulated web viewport | 466 × 678 CSS px @3x | 890 × 626 CSS px @3x |
 
-The body is two slabs of stacked rounded layers plus flat edge faces; the hinge is a
-half-cylinder of slats that morphs from flush (open) to spine (closed). The folding half
-rotates about an axis offset by half the hinge gap so the closed stack lands at 11.3 mm.
+The folding half rotates about an axis half a hinge-gap in front of the display plane, so
+the closed stack lands at exactly 11.3 mm. Each display's iframe is sized to the device's
+CSS viewport and scaled into millimetres, so sites lay out exactly as they would on the phone.
 
 ## Controls
 
 - Drag horizontally on the stage to fold; release to snap open/closed or free-stop in the
-  middle range like the real hinge. Click to toggle. Arrow keys nudge, Space toggles.
+  middle range like the real hinge. Click to toggle. Arrow keys nudge, Space toggles. A
+  hand at the folding half's free edge shows where to grab until the first interaction.
+- On mouse devices the page uses a custom cursor that turns into drag arrows over the
+  device and hands back to the browser's cursor inside the previewed site.
 - Closed / Flex / Open buttons and the hinge slider set the angle directly.
 - Night Sky / Star White switch the finish. "Turn around" shows the rear cameras.
 - `?url=…` in the address bar loads a site on arrival, so results can be shared. Without

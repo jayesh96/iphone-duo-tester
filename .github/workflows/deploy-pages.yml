@@ -34,8 +34,9 @@ jobs:
         run: |
           mkdir -p _site
           cp index.html styles.css app.js _site/
+          cp -r vendor _site/vendor
           # Pages cannot run api/check.js; tell the page to load sites directly.
-          sed -i 's|<script src="app.js" defer></script>|<script src="app.js" data-api="" defer></script>|' _site/index.html
+          sed -i 's|<meta name="duo-api" content="api/check">|<meta name="duo-api" content="">|' _site/index.html
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
         with:
