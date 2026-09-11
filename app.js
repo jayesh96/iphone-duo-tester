@@ -592,14 +592,49 @@ stage.addEventListener('keydown', (e) => {
 /* Fold hint: shows where to grab and which way to drag                   */
 /* ====================================================================== */
 
+// Two prompts alternate: "drag to fold" at the folding half's free edge, then
+// "click and scroll" in the middle of the display. Gone at the first interaction.
 let hintShown = false;
 let hintTl = null;
+let hintPhase = 'drag';
+let hintCycle = null;
+const hintLabel = hint && hint.querySelector('.label');
+const HINT_TEXT = { drag: 'Drag to fold', explore: 'Click & scroll to explore the site' };
+
+function hintAnchor() {
+  return hintPhase === 'drag' ? toScreen(left, -HW, 0, T / 2) : toScreen(phone, 0, 6, T / 2);
+}
+function startHintPhase(phase) {
+  hintPhase = phase;
+  hint.classList.toggle('tap', phase === 'explore');
+  if (hintLabel) hintLabel.textContent = HINT_TEXT[phase];
+  if (!gsap) return;
+  if (hintTl) hintTl.kill();
+  gsap.killTweensOf('#hint .ring');
+  gsap.set('#hint .hand', { x: 0, y: 0, rotate: 0, scale: 1 });
+  if (phase === 'drag') {
+    hintTl = gsap.timeline({ repeat: -1, repeatDelay: 0.6 });
+    hintTl.fromTo('#hint .hand', { x: 0, rotate: -6 }, { x: 64, rotate: 4, duration: 1.1, ease: 'power2.inOut' })
+      .to('#hint .hand', { x: 0, rotate: -6, duration: 0.9, ease: 'power2.inOut' }, '+=0.2');
+    gsap.fromTo('#hint .ring', { scale: 0.6, opacity: 0.9 }, { scale: 1.9, opacity: 0, duration: 1.5, repeat: -1, ease: 'power1.out' });
+  } else {
+    // A tap: press in, ripple out, then a short scroll nudge.
+    hintTl = gsap.timeline({ repeat: -1, repeatDelay: 0.5 });
+    hintTl.to('#hint .hand', { scale: 0.82, duration: 0.18, ease: 'power2.in' })
+      .to('#hint .hand', { scale: 1, duration: 0.35, ease: 'back.out(3)' })
+      .fromTo('#hint .ring', { scale: 0.3, opacity: 0.9 }, { scale: 2.1, opacity: 0, duration: 0.9, ease: 'power1.out' }, '<')
+      .to('#hint .hand', { y: -26, duration: 0.7, ease: 'power2.inOut' }, '+=0.3')
+      .to('#hint .hand', { y: 0, duration: 0.6, ease: 'power2.inOut' }, '+=0.15');
+  }
+  // Fade the label between phases.
+  gsap.fromTo('#hint .label', { opacity: 0, y: 4 }, { opacity: 1, y: 0, duration: 0.4 });
+  hintCycle = gsap.delayedCall(phase === 'drag' ? 5 : 6, () => startHintPhase(phase === 'drag' ? 'explore' : 'drag'));
+}
 function updateHint() {
   if (!hint || state.touched || state.reduced) return;
   const ready = state.settled && state.fold < 1 && !state.flipped;
   if (!ready) { if (hintShown) hideHint(); return; }
-  // Anchor to the middle of the folding half's free edge.
-  const p = toScreen(left, -HW, 0, T / 2);
+  const p = hintAnchor();
   hint.style.transform = `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px)`;
   if (!hintShown) {
     hintShown = true;
@@ -607,12 +642,10 @@ function updateHint() {
     if (gsap) {
       gsap.set(hint, { opacity: 0 });
       gsap.to(hint, { opacity: 1, duration: 0.5, delay: 0.4 });
-      hintTl = gsap.timeline({ repeat: -1, repeatDelay: 0.6, delay: 0.4 });
-      hintTl.fromTo('#hint .hand', { x: 0, rotate: -6 }, { x: 64, rotate: 4, duration: 1.1, ease: 'power2.inOut' })
-        .to('#hint .hand', { x: 0, rotate: -6, duration: 0.9, ease: 'power2.inOut' }, '+=0.2');
-      gsap.fromTo('#hint .ring', { scale: 0.6, opacity: 0.9 }, { scale: 1.9, opacity: 0, duration: 1.5, repeat: -1, ease: 'power1.out' });
+      gsap.delayedCall(0.4, () => { if (hintShown) startHintPhase('drag'); });
     } else {
       hint.style.opacity = 1;
+      startHintPhase('drag');
     }
   }
 }
@@ -620,9 +653,12 @@ function hideHint() {
   if (!hint || !hintShown) return;
   hintShown = false;
   if (hintTl) { hintTl.kill(); hintTl = null; }
+  if (hintCycle) { hintCycle.kill(); hintCycle = null; }
   if (gsap) gsap.to(hint, { opacity: 0, duration: 0.3, onComplete: () => { hint.hidden = true; gsap.killTweensOf('#hint .ring'); } });
   else hint.hidden = true;
 }
+// Entering the previewed site counts as exploring it.
+for (const fr of Object.values(frames)) fr.addEventListener('pointerenter', touched);
 
 /* ====================================================================== */
 /* Custom cursor                                                          */
@@ -637,7 +673,7 @@ function setCursorState(s) {
   cursorEl.classList.remove('is-' + cursorState);
   cursorState = s;
   cursorEl.classList.add('is-' + s);
-  const scale = s === 'hover' ? 1.6 : s === 'grab' ? 1.25 : s === 'grabbing' ? 0.9 : 1;
+  const scale = s === 'hover' ? 1.6 : s === 'grab' ? 1.25 : s === 'grabbing' ? 0.9 : s === 'text' ? 0.5 : 1;
   if (gsap) gsap.to(cursorEl, { scale, duration: 0.35, ease: 'back.out(2)' });
   else cursorEl.style.setProperty('--s', scale);
 }
@@ -650,7 +686,11 @@ if (cursorEl && finePointer) {
     if (state.dragging) return;
     const t = e.target;
     cursorOverStage = !!(t && t.closest && t.closest('#stage')) && !isInteractive(t);
-    if (t && t.closest && t.closest(hoverSel)) setCursorState('hover');
+    // Text fields keep the browser's I-beam so the caret can be placed precisely.
+    const overText = !!(t && t.closest && t.closest('input:not([type=range]), textarea, [contenteditable="true"]'));
+    document.documentElement.classList.toggle('text-cursor', overText);
+    if (overText) setCursorState('text');
+    else if (t && t.closest && t.closest(hoverSel)) setCursorState('hover');
     else if (t && t.closest && t.closest('input[type=range]')) setCursorState('grab');
     else if (cursorOverStage) setCursorState('grab');
     else setCursorState('default');
