@@ -99,6 +99,11 @@ rotates about an axis offset by half the hinge gap so the closed stack lands at 
   middle range like the real hinge. Click to toggle. Arrow keys nudge, Space toggles.
 - Closed / Flex / Open buttons and the hinge slider set the angle directly.
 - Night Sky / Star White switch the finish. "Turn around" shows the rear cameras.
-- `?url=…` in the address bar loads a site on arrival, so results can be shared.
+- `?url=…` in the address bar loads a site on arrival, so results can be shared. Without
+  it the page opens with jayeshbidani.com (`DEFAULT_URL` near the end of `app.js`).
+- Motion follows Apple's fluid-interface guidance: springs are critically damped by
+  default and only bounce after a flick, release velocity is handed to the spring,
+  the landing angle is projected from momentum, and dragging past a stop rubber-bands.
 
-Unofficial fan-made tool, not affiliated with Apple.
+Unofficial fan-made tool, not affiliated with Apple. Jayesh would be very happy if Apple
+gave him one for free 🙂

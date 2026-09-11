@@ -6,6 +6,9 @@
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const DEG = Math.PI / 180;
+  // Momentum projection (scroll-style exponential decay) and rubber-banding.
+  const project = (v, d = 0.995) => ((v / 1000) * d) / (1 - d);
+  const rubberband = (offset, dimension, c = 0.55) => (offset * dimension * c) / (dimension + c * Math.abs(offset));
   // Header-check endpoint. A host that cannot run it (static hosting) can set
   // data-api="" on the script tag; the tester then loads sites directly.
   const API_URL = document.currentScript && document.currentScript.dataset.api !== undefined
@@ -47,6 +50,8 @@
     fold: 180,          // degrees; 0 = open, 180 = closed
     target: 180,
     vel: 0,
+    zeta: 1,            // spring damping ratio: 1 = no overshoot, 0.8 after a flick
+    over: 0,            // rubber-band overshoot past the hinge stops, in degrees
     dragging: false,
     settled: true,
     flipped: false,
@@ -179,8 +184,10 @@
     last = now;
 
     if (!state.dragging && !state.sliderActive) {
-      const k = state.reduced ? 400 : 150;               // stiffness
-      const c = 2 * Math.sqrt(k) * (state.reduced ? 1 : 0.86); // damping (slightly under-damped)
+      // Spring in Apple's terms: response ≈ 0.5 s; damping ratio 1.0 by
+      // default (no overshoot), 0.8 only after a gesture that carried momentum.
+      const k = state.reduced ? 600 : Math.pow((2 * Math.PI) / 0.5, 2);
+      const c = 2 * Math.sqrt(k) * (state.reduced ? 1 : state.zeta);
       const dx = state.fold - state.target;
       const a = -k * dx - c * state.vel;
       state.vel += a * dt;
@@ -197,8 +204,9 @@
       apply();
     }
 
-    // Tilt easing.
-    const ty = state.tiltTarget.y + (state.flipped ? 180 : 0);
+    // Tilt easing. Any rubber-band overshoot relaxes back once released.
+    if (!state.dragging) state.over += (0 - state.over) * Math.min(1, dt * 8);
+    const ty = state.tiltTarget.y + (state.flipped ? 180 : 0) + state.over * 0.12;
     state.tilt.x += (state.tiltTarget.x - state.tilt.x) * Math.min(1, dt * 6);
     state.tilt.y += (ty - state.tilt.y) * Math.min(1, dt * 6);
     rig.style.setProperty('--tx', state.tilt.x.toFixed(3) + 'deg');
@@ -208,8 +216,9 @@
     requestAnimationFrame(loop);
   }
 
-  function setTarget(deg) {
+  function setTarget(deg, opts = {}) {
     state.target = clamp(deg, 0, 180);
+    state.zeta = opts.bounce ? 0.8 : 1;
     state.settled = false;
     syncSegments();
   }
@@ -252,6 +261,7 @@
   });
   function setColor(c) {
     phone.dataset.color = c;
+    stage.dataset.color = c;
     $$('.seg [data-color]').forEach((b) => b.classList.toggle('active', b.dataset.color === c));
     try { localStorage.setItem('duo-color', c); } catch {}
   }
@@ -291,7 +301,11 @@
       if (Math.abs(dx) > 4) drag.moved = true;
       const travel = 2 * SPEC.HW * state.mm; // the free edge travels twice the half width
       const dir = state.flipped ? -1 : 1;
-      const next = clamp(drag.startFold + (dx / travel) * 180 * dir, 0, 180);
+      const raw = drag.startFold + (dx / travel) * 180 * dir;
+      const next = clamp(raw, 0, 180);
+      // Past either stop the hinge resists instead of freezing: the body yaws
+      // a little with the drag, and progressively less the further you go.
+      state.over = rubberband(raw - next, 180, 0.55);
       const now = performance.now();
       const dt = Math.max(1, now - drag.lastT) / 1000;
       const v = (next - state.fold) / dt;
@@ -321,14 +335,16 @@
       // Plain click: toggle.
       setTarget(state.fold < 90 ? 180 : 0);
     } else {
-      // Fling or settle. The real hinge free-stops in the middle range.
-      const f = state.fold;
-      if (drag.vel > 220) setTarget(180);
-      else if (drag.vel < -220) setTarget(0);
-      else if (f < 32) setTarget(0);
-      else if (f > 148) setTarget(180);
-      else { setTarget(f); state.settled = true; }
-      state.vel = clamp(drag.vel, -600, 600);
+      // Project where the momentum would carry the hinge; snap to a stop if
+      // that lands near one, otherwise free-stop there like the real hinge.
+      // The spring starts at the finger's velocity, so there is no seam.
+      const projected = state.fold + project(drag.vel);
+      let target;
+      if (projected < 36) target = 0;
+      else if (projected > 144) target = 180;
+      else target = clamp(projected, 36, 144);
+      setTarget(target, { bounce: true });
+      state.vel = clamp(drag.vel, -900, 900);
     }
   };
   stage.addEventListener('pointerup', endDrag);
@@ -654,7 +670,9 @@
   requestAnimationFrame((t) => { last = t; loop(t); });
 
   const params = new URLSearchParams(location.search);
-  const initial = params.get('url');
+  // Site shown on arrival when no ?url= is given.
+  const DEFAULT_URL = 'jayeshbidani.com';
+  const initial = params.get('url') || DEFAULT_URL;
   if (initial) { input.value = initial; clearBtn.hidden = false; }
 
   // Opening demo.
