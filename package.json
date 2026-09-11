@@ -1,0 +1,14 @@
+{
+  "name": "iphone-duo-tester",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A 1:1 CSS model of iPhone Duo that folds and unfolds, with a live URL tester on both displays.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "ALLOW_PRIVATE=1 node server.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

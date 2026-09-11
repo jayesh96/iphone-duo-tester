@@ -1,0 +1,13 @@
+# Render blueprint: deploys the iPhone Duo tester (static site + /api/check + /api/proxy).
+# Deploy: https://render.com/deploy?repo=https://github.com/jayesh96/iphone-duo-tester
+services:
+  - type: web
+    name: iphone-duo-tester
+    runtime: node
+    plan: free
+    buildCommand: ""
+    startCommand: node server.mjs
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
