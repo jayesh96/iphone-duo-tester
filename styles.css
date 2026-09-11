@@ -917,6 +917,18 @@ footer .coffee {
 }
 footer .coffee:hover { background: var(--surface-2); }
 footer .coffee:active { transform: scale(0.97); }
+.find-me { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 18px; }
+.find-me-label { color: var(--fg-3); margin-right: 4px; }
+.social {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 12px 6px 9px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--line);
+  color: var(--fg-2); font-weight: 500;
+  transition: background 0.15s, color 0.15s, transform 0.15s var(--ease);
+}
+.social svg { width: 14px; height: 14px; fill: currentColor; }
+.social:hover { background: var(--surface-2); color: var(--fg); transform: translateY(-1px); }
+.social:active { transform: scale(0.97); }
 
 @media (max-width: 900px) {
   .tile, .tile.wide { grid-column: span 3; }
